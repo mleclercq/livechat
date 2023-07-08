@@ -117,19 +117,15 @@ object ChatRoomApi:
                 .runForeach: event =>
                   ZIO.log(s"[api] Send chat event $event in room $chatRoomId to $userId") *>
                     channel.writeAndFlush(WebSocketFrame.text(event.asJson.noSpaces))
-                .catchAllCause(e => ZIO.logErrorCause("Websocket error", e) *> channel.close())
+                .catchAllCause(e => ZIO.logErrorCause("[api] Websocket error", e) *> channel.close())
                 .forkScoped
-            _     <- ZIO.log(s"[api] $userId joining $chatRoomId")
             users <- messenger.send[Set[String]](chatRoomId)(Message.Join(userId, _))
-            _     <- ZIO.log(s"[api] $userId joined $chatRoomId")
             _ <- channel.writeAndFlush(WebSocketFrame.text((ChatEvent.UsersInRoom(users): ChatEvent).asJson.noSpaces))
           yield ()
 
         case ChannelEvent(channel, ChannelEvent.ChannelUnregistered) =>
           for
-            _ <- ZIO.checkInterruptible(status =>
-              ZIO.log(s"[api] Websocket for room $chatRoomId to $userId closed $status")
-            )
+            _ <- ZIO.log(s"[api] Websocket for room $chatRoomId to $userId closed")
             _ <- webSocketScope.close(Exit.unit)
             // Note: We get ChannelUnregistered event when the pod is shuting down, but if this pod is also the one
             // running the chat room entity, the Leave message isn't delivered since the entity is also shutting
