@@ -1,0 +1,15 @@
+services:
+  lb:
+    build:
+      context: nginx
+    container_name: nginx-lb
+    ports:
+      - 8080:8080
+    restart: unless-stopped
+
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - 6379:6379
+    restart: unless-stopped
